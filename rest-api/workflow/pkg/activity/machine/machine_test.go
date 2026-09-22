@@ -1631,6 +1631,67 @@ func TestManageMachine_UpdateMachinesInDB_AddresslessInterface(t *testing.T) {
 	assert.Empty(t, machineInterfaces[0].IPAddresses)
 }
 
+// TestManageMachine_UpdateMachinesInDB_ReconcilesAfterOwnWrite proves that
+// reconciliation no longer skips a Machine solely because a previous reconcile
+// bumped its generic `updated` column. The staleness guard must defer to a
+// reported inventory only when a change is newer than that inventory's own
+// reported collection time, not merely newer than "one interval ago".
+func TestManageMachine_UpdateMachinesInDB_ReconcilesAfterOwnWrite(t *testing.T) {
+	dbSession := testMachineInitDB(t)
+	defer dbSession.Close()
+	testMachineSetupSchema(t, dbSession)
+
+	tSiteClientPool := testTemporalSiteClientPool(t)
+	require.NotNil(t, tSiteClientPool)
+
+	ctx := context.Background()
+
+	ip := testMachineBuildInfrastructureProvider(t, dbSession, "reconcile-after-own-write-org", "reconcileAfterOwnWriteProvider")
+	site := testMachineBuildSite(t, dbSession, ip, "reconcile-after-own-write-site", cdbm.SiteStatusRegistered)
+	machine := testMachineBuildMachine(t, dbSession, ip.ID, site.ID, nil, nil, false, nil, false, nil, cutil.GetPtr(cdbm.MachineStatusReady))
+
+	machineDAO := cdbm.NewMachineDAO(dbSession)
+
+	// Simulate a previous successful reconcile: the write marks the Machine present
+	// and bumps `updated` to ~now, exactly as the reconcile update does in
+	// production. This is the write that used to trip the guard on the next snapshot.
+	_, err := machineDAO.Update(ctx, nil, cdbm.MachineUpdateInput{
+		MachineID:       machine.ID,
+		IsMissingOnSite: cutil.GetPtr(true),
+	})
+	require.NoError(t, err)
+
+	// The next inventory snapshot is collected now, i.e. after the reconcile write
+	// above. Its reported timestamp is what the guard must compare `updated` against.
+	inventory := &corev1.MachineInventory{
+		Machines: []*corev1.MachineInfo{
+			{
+				Machine: &corev1.Machine{
+					Id:     &corev1.MachineId{Id: machine.ControllerMachineID},
+					State:  controllerMachineStatePrefixReady,
+					Status: &corev1.MachineStatus{},
+				},
+			},
+		},
+		Timestamp:       timestamppb.Now(),
+		InventoryStatus: corev1.InventoryStatus_INVENTORY_STATUS_SUCCESS,
+	}
+
+	manager := ManageMachine{
+		dbSession:      dbSession,
+		siteClientPool: tSiteClientPool,
+	}
+	require.NoError(t, manager.UpdateMachinesInDB(ctx, site.ID.String(), inventory))
+
+	// The Machine was reported in an inventory collected after its last write, so
+	// reconciliation must apply it rather than treat its own prior write as a
+	// competing external change. IsMissingOnSite flips to false only when the
+	// update path runs; it stays true if the guard wrongly skipped the Machine.
+	reconciled, err := machineDAO.GetByID(ctx, nil, machine.ID, nil, false)
+	require.NoError(t, err)
+	assert.False(t, reconciled.IsMissingOnSite, "machine reported in a newer inventory must be reconciled, not skipped as recently updated")
+}
+
 func TestNewManageMachine(t *testing.T) {
 	type args struct {
 		dbSession     *cdb.Session
