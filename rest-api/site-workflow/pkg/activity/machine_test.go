@@ -17,6 +17,7 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	corev1 "github.com/NVIDIA/infra-controller/rest-api/proto/core/gen/v1"
 	cClient "github.com/NVIDIA/infra-controller/rest-api/site-workflow/pkg/grpc/client"
@@ -580,4 +581,29 @@ func (mm *testManageMachineWithMock) GetDpuMachinesByIDsWithMock(ctx context.Con
 
 	logger.Info().Int("dpu_machine_count", len(dpuMachines)).Msg("Completed activity")
 	return dpuMachines, nil
+}
+
+// TestMachinePagedInventoryStampsCollectionTime proves each published page carries
+// the captured collection boundary rather than the build/publish time. Cloud's
+// freshness guard compares Machine.Updated against this timestamp, so it must
+// reflect when the data was read, not when the page was assembled during pagination.
+func TestMachinePagedInventoryStampsCollectionTime(t *testing.T) {
+	collectedAt := &timestamppb.Timestamp{Seconds: 1_791_539_642}
+	input := &pagedInventoryInput{
+		totalItems: 1,
+		totalPages: 1,
+		pageSize:   1,
+		pageNumber: 1,
+		status:     corev1.InventoryStatus_INVENTORY_STATUS_SUCCESS,
+	}
+
+	inventory := machinePagedInventory(
+		[]*corev1.MachineId{{Id: "m1"}},
+		[]*corev1.Machine{{Id: &corev1.MachineId{Id: "m1"}}},
+		input,
+		collectedAt,
+	)
+
+	assert.True(t, proto.Equal(collectedAt, inventory.GetTimestamp()),
+		"machinePagedInventory must stamp the captured collection boundary, not the build/publish time")
 }

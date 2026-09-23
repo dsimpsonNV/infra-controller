@@ -486,12 +486,17 @@ func (mm *ManageMachine) UpdateMachinesInDB(ctx context.Context, siteIDStr strin
 			// reported collection time, rather than "updated within one interval of
 			// now", is what keeps reconciliation's own write from tripping this guard
 			// on the very next snapshot: that write predates the next collection, so
-			// it is correctly treated as self, not as a competing external change. A
-			// small buffer absorbs site/cloud clock skew. Older Site Agents may not
-			// report a collection timestamp; fall back to the interval-based window.
+			// it is correctly treated as self, not as a competing external change.
+			//
+			// The buffer is applied conservatively — subtracted, so the cutoff moves
+			// earlier — so that under clock skew we err toward preserving a genuine
+			// edit rather than overwriting it. The Site Agent stamps the collection
+			// time before fetching, so an edit at or after that instant is genuinely
+			// newer than the reported data. Older Site Agents may not report a
+			// collection timestamp; fall back to the interval-based window.
 			var machineChangedAfterInventory bool
 			if ts := machineInventory.GetTimestamp(); ts != nil && ts.GetSeconds() > 0 {
-				machineChangedAfterInventory = existingCloudMachine.Updated.After(ts.AsTime().Add(cwutil.StaleInventoryBuffer))
+				machineChangedAfterInventory = existingCloudMachine.Updated.After(ts.AsTime().Add(-cwutil.StaleInventoryBuffer))
 			} else {
 				machineChangedAfterInventory = site.IsTimeWithinStaleInventoryThreshold(existingCloudMachine.Updated)
 			}
