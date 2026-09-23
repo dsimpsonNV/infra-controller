@@ -359,6 +359,18 @@ func TestManageMachineInventory_CollectAndPublishMachineInventory(t *testing.T) 
 			assert.Equal(t, tt.fields.cloudPageSize, int(inventory.InventoryPage.PageSize))
 			assert.Equal(t, tt.args.wantTotalItems, int(inventory.InventoryPage.TotalItems))
 			assert.Equal(t, tt.args.wantTotalItems, len(inventory.InventoryPage.ItemIds))
+
+			// Every published page must carry the single collection timestamp
+			// captured before the fetch, not a fresh per-page stamp. Cloud's
+			// freshness guard compares Machine.Updated against this value, so a
+			// timestamp that drifts across pages would be unsafe.
+			assert.NotNil(t, inventory.Timestamp)
+			for i, call := range tc.Calls {
+				page, ok := call.Arguments[4].(*corev1.MachineInventory)
+				assert.Truef(t, ok, "call %d did not publish a MachineInventory", i)
+				assert.Truef(t, proto.Equal(inventory.Timestamp, page.GetTimestamp()),
+					"page %d timestamp differs from the first page; all pages must share the collection boundary", i)
+			}
 		})
 	}
 }
