@@ -356,24 +356,33 @@ jobs:
 
       # Staged under a directory that reproduces the repo-relative layout, same
       # pattern as the bluefield binaries in ci.yaml, so the dependent job's
-      # download restores the archive where its Dockerfile reads it. Canonical
-      # pushes straight from the build step without loading, so the image is
-      # pulled back from the registry the pre-build login already opened.
+      # download restores the archive where its Dockerfile reads it. A loaded
+      # image is this run's build. Canonical pushes straight from the build step
+      # without loading, so the image is pulled back by the digest this run
+      # pushed, through the registry login the pre-build step already opened; the
+      # tag alone could resolve to an older local build of the same version.
       - name: Export image archive
         id: archive
         if: ${{ inputs.export_image_archive != '' }}
         env:
           ARCHIVE: ${{ inputs.export_image_archive }}
           ARCHIVE_REF: ${{ inputs.export_image_archive_ref }}
+          IMAGE_NAME: ${{ inputs.image_name }}
+          LOADED: ${{ steps.loadgate.outputs.load }}
           PRIMARY: ${{ steps.tag_list.outputs.primary }}
+          DIGEST: ${{ steps.build.outputs.digest }}
         run: |
           set -euo pipefail
           if [[ -z "${ARCHIVE_REF}" ]]; then
             echo "export_image_archive_ref is required with export_image_archive" >&2
             exit 1
           fi
-          docker image inspect "${PRIMARY}" >/dev/null 2>&1 || docker pull "${PRIMARY}"
-          docker tag "${PRIMARY}" "${ARCHIVE_REF}"
+          SOURCE="${PRIMARY}"
+          if [[ "${LOADED}" != "true" ]]; then
+            SOURCE="${IMAGE_NAME}@${DIGEST:?the build step reported no digest to pull}"
+            docker pull "${SOURCE}"
+          fi
+          docker tag "${SOURCE}" "${ARCHIVE_REF}"
           mkdir -p "image-archive-dir/$(dirname -- "${ARCHIVE}")"
           docker save --output "image-archive-dir/${ARCHIVE}" "${ARCHIVE_REF}"
           printf 'key=%s\n' "$(basename -- "${ARCHIVE}" .tar)" >> "$GITHUB_OUTPUT"
