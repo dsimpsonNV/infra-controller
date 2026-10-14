@@ -435,7 +435,7 @@ This file contains a list of metrics exported by NVIDIA Infra Controller (NICo).
 <tr><td>carbide_vpc_prefixes_state_exited_total</td><td>counter</td><td>Number of times objects of type carbide_vpc_prefixes have exited a certain state</td></tr>
 <tr><td>carbide_vpc_prefixes_time_in_state_seconds</td><td>histogram</td><td>The amount of time objects of type carbide_vpc_prefixes have spent in a certain state</td></tr>
 <tr><td>carbide_vpc_prefixes_total</td><td>gauge</td><td>Number of carbide_vpc_prefixes in the system</td></tr>
-<tr><td>carbide_vpc_prefixes_with_state_handling_errors_per_state</td><td>gauge</td><td>Number of state-handling errors for carbide_vpc_prefixes in a given state</td></tr>
+<tr><td>carbide_vpc_prefixes_with_state_handling_errors_per_state</td><td>gauge</td><td>Number of carbide_vpc_prefixes whose most recent state handler run returned an error, by state and error; the error=any series is the total across all errors in that state, so exclude it when summing over error</td></tr>
 <tr><td>carbide_work_lock_failures_total</td><td>counter</td><td>Number of work-lock lifecycle failures, by operation and failure kind.</td></tr>
 <tr><td>site_explorer_create_power_shelves_latency_seconds</td><td>histogram</td><td>Duration of power shelf creation</td></tr>
 <tr><td>site_explorer_create_switches_latency_seconds</td><td>histogram</td><td>Duration of switch creation</td></tr>
