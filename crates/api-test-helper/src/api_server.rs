@@ -242,6 +242,9 @@ pub async fn start(
         metric_emission_interval = "1s"
         metric_hold_time = "2s"
 
+        [extension_service_state_controller.controller]
+        metric_emission_interval = "1s"
+
         [host_models]
 
         [rack_profiles.GB200_NVL72_WIWYNN]

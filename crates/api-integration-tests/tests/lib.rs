@@ -34,13 +34,16 @@ use api_test_helper::{
 };
 use bmc_mock::test_support::TEST_MAC_POOL;
 use bmc_mock::{HardwareType, ListenerOrAddress};
+use carbide_uuid::extension_service::ExtensionServiceId;
 use carbide_uuid::machine::StableHostMachineId;
 use carbide_uuid::site_prefix::SitePrefixId;
+use config_version::ConfigVersion;
 use eyre::{ContextCompat, WrapErr};
 use futures::FutureExt;
 use futures::future::join_all;
 use itertools::Itertools;
 use mac_address::MacAddress;
+use model::extension_service::{DpuTarget, ExtensionServiceType};
 use model::machine_boot_interface::BootInterfaceSelectionSource;
 use model::metadata::Metadata;
 use model::resource_pool::binding::INTEGRATED_AUTHORITY_ID;
@@ -194,6 +197,27 @@ async fn test_integration() -> eyre::Result<()> {
 
     let tenant_org_id = "tenant_organization";
     tenant::create(carbide_api_addrs, tenant_org_id, "Tenant Organization").await?;
+    // Extension-service controller families only appear in the catalogue
+    // scrape once the controller processes an object. The controller only
+    // reconciles DPF Helm chart services; without DPF this one waits in Creating.
+    let mut txn = test_env.db_pool.begin().await?;
+    db::extension_service::create(
+        &mut txn,
+        ConfigVersion::initial(),
+        &ExtensionServiceId::new(),
+        &ExtensionServiceType::DpfHelmChart,
+        Some(DpuTarget::Primary),
+        "metric-catalogue-service",
+        &tenant_org_id.parse()?,
+        None,
+        &[],
+        r#"{"repoURL":"oci://registry.example.com/charts","chartName":"metric-catalogue","chartVersion":"1.0.0","serviceID":"metric-catalogue","deployInCluster":false,"security":{"privileged":false}}"#,
+        Some("metric-catalogue"),
+        None,
+        false,
+    )
+    .await?;
+    txn.commit().await?;
 
     // The first enqueue is immediate; allow later 30-second passes and jitter.
     tokio::time::timeout(Duration::from_secs(120), async {
@@ -402,6 +426,23 @@ async fn test_integration() -> eyre::Result<()> {
             .any(|metric| metric.name == "carbide_scout_pci_evaluations_total"),
         "the MaT scout path must exercise PCI comparison observability",
     );
+    // The extension service never leaves Creating, so the state-transition
+    // families are not expected here.
+    for (family, metric_type) in [
+        ("object_tasks_dispatched_total", "counter"),
+        ("object_tasks_completed_total", "counter"),
+        ("object_tasks_requeued_total", "counter"),
+        ("handler_latency_in_state_milliseconds", "histogram"),
+        ("per_state", "gauge"),
+        ("per_state_above_sla", "gauge"),
+        ("with_state_handling_errors_per_state", "gauge"),
+    ] {
+        metrics::wait_for_metric_line(
+            &test_env.carbide_metrics_addrs,
+            &format!("# TYPE carbide_extension_services_{family} {metric_type}\n"),
+        )
+        .await?;
+    }
     generate_core_metric_docs(&test_env.carbide_metrics_addrs);
     drop(mqtt_client);
 

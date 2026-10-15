@@ -1397,6 +1397,7 @@ dependencies = [
  "carbide-secrets",
  "carbide-utils",
  "carbide-uuid",
+ "config-version",
  "ctor",
  "eyre",
  "futures",
