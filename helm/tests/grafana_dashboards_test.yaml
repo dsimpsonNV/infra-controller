@@ -73,6 +73,41 @@ tests:
           path: metadata.name
           value: nico-system-test-nico-nico-site-detail
 
+  - it: labels DPU inventory and NIC firmware panels as DPU counts
+    set:
+      grafanaDashboards.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["nico-site-detail.json"]
+          pattern: '"title": "DPU inventory component versions"'
+        documentSelector:
+          path: metadata.name
+          value: nico-system-test-nico-nico-site-detail
+      - matchRegex:
+          path: data["nico-site-detail.json"]
+          pattern: '"description": "DPUs per reported in-band software component and version\."'
+        documentSelector:
+          path: metadata.name
+          value: nico-system-test-nico-nico-site-detail
+      - matchRegex:
+          path: data["nico-site-detail.json"]
+          pattern: '"description": "DPUs with outdated NIC firmware, split by whether an update can run now\."'
+        documentSelector:
+          path: metadata.name
+          value: nico-system-test-nico-nico-site-detail
+      - matchRegex:
+          path: data["nico-fleet.json"]
+          pattern: '"title": "DPU inventory component versions"'
+        documentSelector:
+          path: metadata.name
+          value: nico-system-test-nico-nico-fleet
+      - matchRegex:
+          path: data["nico-fleet.json"]
+          pattern: '"description": "DPUs per reported in-band software component and version\."'
+        documentSelector:
+          path: metadata.name
+          value: nico-system-test-nico-nico-fleet
+
   - it: stores each dashboard as parseable JSON
     set:
       grafanaDashboards.enabled: true
