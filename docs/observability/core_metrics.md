@@ -277,7 +277,7 @@ This file contains a list of metrics exported by NVIDIA Infra Controller (NICo).
 <tr><td>carbide_power_shelves_state_exited_total</td><td>counter</td><td>Number of times objects of type carbide_power_shelves have exited a certain state</td></tr>
 <tr><td>carbide_power_shelves_time_in_state_seconds</td><td>histogram</td><td>The amount of time objects of type carbide_power_shelves have spent in a certain state</td></tr>
 <tr><td>carbide_power_shelves_total</td><td>gauge</td><td>Number of carbide_power_shelves in the system</td></tr>
-<tr><td>carbide_power_shelves_with_state_handling_errors_per_state</td><td>gauge</td><td>Number of state-handling errors for carbide_power_shelves in a given state</td></tr>
+<tr><td>carbide_power_shelves_with_state_handling_errors_per_state</td><td>gauge</td><td>Number of carbide_power_shelves whose most recent state handler run returned an error, by state and error; the error=any series is the total across all errors in that state, so exclude it when summing over error</td></tr>
 <tr><td>carbide_preingestion_bfb_copy_duration_seconds</td><td>histogram</td><td>Duration of preingestion BFB copies to a DPU rshim, by outcome; the _count series, split by outcome, is the copy and failure rate.</td></tr>
 <tr><td>carbide_preingestion_count</td><td>gauge</td><td>Number of known machines currently being evaluated prior to ingestion</td></tr>
 <tr><td>carbide_preingestion_firmware_upgrade_tasks_total</td><td>counter</td><td>Number of preingestion firmware upgrade Redfish tasks reaching a terminal state, by firmware component, final task state, and outcome.</td></tr>
@@ -302,7 +302,7 @@ This file contains a list of metrics exported by NVIDIA Infra Controller (NICo).
 <tr><td>carbide_racks_per_state</td><td>gauge</td><td>Number of carbide_racks in the system with a given state</td></tr>
 <tr><td>carbide_racks_per_state_above_sla</td><td>gauge</td><td>Number of carbide_racks currently in a state longer than the SLA allows</td></tr>
 <tr><td>carbide_racks_total</td><td>gauge</td><td>Number of carbide_racks in the system</td></tr>
-<tr><td>carbide_racks_with_state_handling_errors_per_state</td><td>gauge</td><td>Number of state-handling errors for carbide_racks in a given state</td></tr>
+<tr><td>carbide_racks_with_state_handling_errors_per_state</td><td>gauge</td><td>Number of carbide_racks whose most recent state handler run returned an error, by state and error; the error=any series is the total across all errors in that state, so exclude it when summing over error</td></tr>
 <tr><td>carbide_reboot_attempts_in_booting_with_discovery_image</td><td>histogram</td><td>Reboot attempts per machine in BootingWithDiscoveryImage, recorded when a machine is rebooted again after no response from the host.</td></tr>
 <tr><td>carbide_redfish_action_result_persistence_failures_total</td><td>counter</td><td>Number of detached Redfish action results that failed to persist</td></tr>
 <tr><td>carbide_reserved_ips_count</td><td>gauge</td><td>Number of reserved IPs per network segment</td></tr>
@@ -373,7 +373,7 @@ This file contains a list of metrics exported by NVIDIA Infra Controller (NICo).
 <tr><td>carbide_switches_state_exited_total</td><td>counter</td><td>Number of times objects of type carbide_switches have exited a certain state</td></tr>
 <tr><td>carbide_switches_time_in_state_seconds</td><td>histogram</td><td>The amount of time objects of type carbide_switches have spent in a certain state</td></tr>
 <tr><td>carbide_switches_total</td><td>gauge</td><td>Number of carbide_switches in the system</td></tr>
-<tr><td>carbide_switches_with_state_handling_errors_per_state</td><td>gauge</td><td>Number of state-handling errors for carbide_switches in a given state</td></tr>
+<tr><td>carbide_switches_with_state_handling_errors_per_state</td><td>gauge</td><td>Number of carbide_switches whose most recent state handler run returned an error, by state and error; the error=any series is the total across all errors in that state, so exclude it when summing over error</td></tr>
 <tr><td>carbide_tokio_runtime_workers</td><td>gauge</td><td>Number of worker threads in the Tokio runtime</td></tr>
 <tr><td>carbide_tokio_worker_busy_seconds_total</td><td>counter</td><td>Number of seconds each Tokio runtime worker thread has spent running tasks</td></tr>
 <tr><td>carbide_total_ips_count</td><td>gauge</td><td>Number of IPs per network segment</td></tr>
